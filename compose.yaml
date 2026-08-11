@@ -1,0 +1,27 @@
+services:
+  app:
+    build: .
+    container_name: cm-patch
+    restart: unless-stopped
+    environment:
+      #* app
+      MODE: ${MODE}
+      NAME: ${NAME}
+      #* holder
+      HOLDER_DID: ${HOLDER_DID}
+      HOLDER_KEY_PATH: ${HOLDER_KEY_PATH}
+      #* tmf
+      TMF_URL: ${TMF_URL}
+      TMF_IGNORE_ORGS: ${TMF_IGNORE_ORGS}
+      #* keycloak
+      KC_URL: ${KC_URL}
+      KC_REALM: ${KC_REALM}
+      KC_CLIENT_ID: ${KC_CLIENT_ID}
+      KC_SCOPE: ${KC_SCOPE}
+      KC_USER: ${KC_USER}
+      KC_PASS: ${KC_PASS}
+      #* VC & JWT
+      VC_CONFIG_IDS: ${VC_CONFIG_IDS}
+      VC_CONFIG_FORMATS: ${VC_CONFIG_FORMATS}
+      VC_CONFIG_SCOPES: ${VC_CONFIG_SCOPES}
+
