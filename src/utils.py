@@ -1,14 +1,7 @@
+from http import HTTPStatus
 import base64, logging
-from enum import Enum, auto
 
-class Mode(Enum):
-    DEBUG   = auto()
-    DEV     = auto()
-    PROD    = auto()
-
-    @property
-    def is_debug(self) -> bool:
-        return self == self.DEBUG
+from .config import Mode
 
 def logger_get(name: str) -> logging.Logger:
     return logging.getLogger(name)
@@ -46,3 +39,5 @@ def logger_init_root(mode: Mode):
 def base64url_encode(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
 
+def http_code_to_string(code: int) -> str:
+    return HTTPStatus(code).phrase

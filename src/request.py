@@ -2,6 +2,7 @@ import json
 from dataclasses import dataclass
 from typing import (
     Any,
+    Dict,
     Literal,
     Self,
 )
@@ -9,21 +10,18 @@ from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request as UrlRequest
 from urllib.request import urlopen
-from http import HTTPStatus
 
-from .utils import logger_get
+from .utils import http_code_to_string, logger_get
 
 log = logger_get(__name__)
 
-type Method = Literal["GET"]|Literal["POST"]
-
 @dataclass(frozen=True, slots=True)
 class Request:
-    method: Method
+    method: Literal["GET", "POST"]
     url: str
-    headers: dict[str, str] | None = None
-    params: dict[str, Any] | None = None
-    data: dict[str, Any] | None = None
+    headers: Dict[str, str] | None = None
+    params: Dict[str, Any] | None = None
+    data: Dict[str, Any] | None = None
     json: bool = True
 
     def fetch(self) -> Response:
@@ -114,7 +112,7 @@ class Response:
 
     @property
     def status_text(self) -> str:
-        return HTTPStatus(self.status).phrase
+        return http_code_to_string(self.status)
 
     @property
     def ok(self) -> bool:

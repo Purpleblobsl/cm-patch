@@ -1,7 +1,8 @@
 import os, inspect
 from dataclasses import MISSING, fields, is_dataclass
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import Enum, auto
+from pathlib import Path
 from typing import (
     Any,
     Iterable,
@@ -12,7 +13,14 @@ from typing import (
     get_origin,
 )
 
-from .utils import Mode
+class Mode(Enum):
+    DEBUG   = auto()
+    DEV     = auto()
+    PROD    = auto()
+
+    @property
+    def is_debug(self) -> bool:
+        return self == self.DEBUG
 
 type Primitive  = bool|int|float|str|Enum
 type FieldValue = Primitive|list[Primitive]|tuple[Primitive,...]|set[Primitive]
@@ -22,8 +30,9 @@ config: Config
 class Config:
     #* app
 
-    MODE: Mode
+    APP_MODE: Mode
     APP_NAME: str = "cm-patch"
+    APP_PORT: int = 8080
 
     #* holder
 
@@ -210,6 +219,20 @@ def config_str(cfg: object) -> str:
     return text
 
 def config_assert():
+    #* app
+    assert(0 < config.APP_PORT <= 65535)
+
+    #* holder
+    assert(Path(config.HOLDER_KEY_PATH).is_file())
+
+    #* tmf
+    # TODO test connection
+
+    #* keycloak
+    # TODO test connection
+
+    #* VC & JWT
+    assert(0 < len(config.VC_CONFIG_FORMATS))
     assert(len(config.VC_CONFIG_FORMATS) == len(config.VC_CONFIG_IDS))
     assert(len(config.VC_CONFIG_FORMATS) == len(config.VC_CONFIG_SCOPES))
 
