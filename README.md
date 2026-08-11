@@ -53,6 +53,21 @@ kubectl -n "$NS" get secret did-secrets \
     | tee ./data/certs/private-key.pem
 ```
 
+## Local Development
+
+### Docker Compose
+
+The application can be deployed locally using **Docker Compose**.
+
+The Compose expects the holder private key at: `./data/certs/private-key.pem`
+
+Create a `.env` file containing the required configuration and start the
+application with:
+
+```sh
+docker compose up --build # `--build` rebuilds the image, to update the changes
+```
+
 ## Notes
 
 - This component was built to patch an error in the `contract-management`
