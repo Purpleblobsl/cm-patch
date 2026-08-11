@@ -8,13 +8,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Copy dependency files first for better layer caching
-COPY pyproject.toml uv.lock ./
-
 # Install dependencies into /app/.venv
+COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-install-project
 
-# Copy application
 COPY src ./src
 COPY main.py ./
 

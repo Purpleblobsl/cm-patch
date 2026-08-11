@@ -46,6 +46,7 @@ creates, this is a fast way to fetch one from a connector:
 
 ```sh
 NS="my-central-marketplace"
+
 mkdir -p ./data/certs
 kubectl -n "$NS" get secret did-secrets \
     -o jsonpath='{.data.private-key\.pem}' \
@@ -54,6 +55,17 @@ kubectl -n "$NS" get secret did-secrets \
 ```
 
 ## Local Development
+
+Generating some `odrl-pap` policies, and supliying those to a target deployed
+test connector, would be sublime, but it's **WIP**, so for now, just
+`port-forward` the services:
+
+```sh
+NS="my-central-marketplace"
+
+kubectl -n "$NS" port-forward \
+    deployments/tm-forum-api-all-in-one 8081:8080 >/dev/null &
+```
 
 ### Docker Compose
 
@@ -65,7 +77,7 @@ Create a `.env` file containing the required configuration and start the
 application with:
 
 ```sh
-docker compose up --build # `--build` rebuilds the image, to update the changes
+docker compose up
 ```
 
 ## Notes

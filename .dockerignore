@@ -12,3 +12,4 @@ __pycache__/
 /docs
 
 Dockerfile
+Dockerfile.dev

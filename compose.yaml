@@ -1,11 +1,17 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     container_name: cm-patch
     restart: unless-stopped
 
-    volumes:
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+
+    volumes: # Note: mount local directory so there is no need to rebuild image
       - ./data/certs:/certs:ro
+      - .:/app
 
     environment: # Note: `.env` will be loaded to fill the values
       #* app
