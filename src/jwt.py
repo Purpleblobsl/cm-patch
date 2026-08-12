@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 
-from .config import config
+from .config import Config
 from .request import Request, Response
 from .utils import base64url_encode, logger_get
 
@@ -66,17 +66,17 @@ class VCCache:
 def get_access_token() -> str:
     response: Response = Request(
         method="POST",
-        url=config.token_url,
+        url=Config.token_url,
         headers={
             "Accept": "application/json",
             "Content-Type": "application/x-www-form-urlencoded",
         },
         data={
             "grant_type": "password",
-            "client_id": config.KC_CLIENT_ID,
-            "username": config.KC_USER,
-            "scope": config.KC_SCOPE,
-            "password": config.KC_PASS,
+            "client_id": Config.KC_CLIENT_ID,
+            "username": Config.KC_USER,
+            "scope": Config.KC_SCOPE,
+            "password": Config.KC_PASS,
         },
         json=False,
     ).fetch().raise_for_status()
@@ -92,7 +92,7 @@ def get_offer_uri(
 ) -> str:
     response = Request(
         method="GET",
-        url=f"{config.oid4vc_url}/credential-offer-uri",
+        url=f"{Config.oid4vc_url}/credential-offer-uri",
         params={
             "credential_configuration_id": credential_id,
         },
@@ -140,7 +140,7 @@ def get_credential_access_token(
 ) -> str:
     response: Response = Request(
         method="POST",
-        url=config.token_url,
+        url=Config.token_url,
         headers={
             "Accept": "application/json",
             "Content-Type": "application/x-www-form-urlencoded",
@@ -166,7 +166,7 @@ def get_credential(
 ) -> Tuple[str, datetime]:
     response: Response = Request(
         method="POST",
-        url=f"{config.oid4vc_url}/credential",
+        url=f"{Config.oid4vc_url}/credential",
         headers={
             "Accept": "application/json",
             "Authorization": f"Bearer {access_token}",
@@ -191,7 +191,7 @@ def check_credential_format(
 ):
     response: Response = Request(
         method="GET",
-        url= f"{config.kc_url}/.well-known/openid-credential-issuer",
+        url= f"{Config.kc_url}/.well-known/openid-credential-issuer",
         headers={
             "Accept": "application/json",
             "Content-Type": "application/json"

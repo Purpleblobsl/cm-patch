@@ -28,12 +28,9 @@ Using `uv` for local development:
 # install python 3.14
 uv python install 3.14
 
-# create and activate a virtual environment
-uv venv
-. ./.venv/bin/activate
-
-# install dependencies
+# install dependencies & create virtual environment
 uv sync
+. ./.venv/bin/activate
 
 # verify version
 python --version

@@ -5,6 +5,7 @@ description = "Contract-Management - Patch Around TMF Contract Handling"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "bean-config==0.2.1",
     "cryptography>=50.0.0",
     "flask>=3.1.3",
 ]

@@ -6,12 +6,20 @@ services:
     container_name: cm-patch
     restart: unless-stopped
 
+    command:
+      - sh
+      - -euc
+      - |
+        uv sync --locked --no-install-project
+        uv run main.py
+
     ports:
       - "${APP_PORT}:${APP_PORT}"
 
     volumes: # Note: mount local directory so there is no need to rebuild image
-      - ./data/certs:/certs:ro
       - .:/app
+      - app_venv:/app/.venv # Note: separate venv for the image and local
+      - ./data/certs:/certs:ro
 
     environment: # Note: `.env` will be loaded to fill the values
       #* app
@@ -39,3 +47,6 @@ services:
       VC_CONFIG_IDS: ${VC_CONFIG_IDS}
       VC_CONFIG_FORMATS: ${VC_CONFIG_FORMATS}
       VC_CONFIG_SCOPES: ${VC_CONFIG_SCOPES}
+
+volumes:
+  app_venv:
