@@ -4,11 +4,11 @@ requires-python = ">=3.14"
 
 [[package]]
 name = "bean-config"
-version = "0.2.1"
+version = "0.2.2"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/25/9d/16b3e68f9d98f4a90e1b5f85ac2642ccb03600ea85450b324b1309d16529/bean_config-0.2.1.tar.gz", hash = "sha256:49336a44ef4985ad81e3d78d813b44095545a7025c8accfe5cf4f25e92ccc414", size = 11553, upload-time = "2026-08-12T09:00:40.732Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6d/3a/33fcda3d70930f344ddeabb910a604411d2698257f479dd6383dbd310e1b/bean_config-0.2.2.tar.gz", hash = "sha256:e5348315bcaf06e732d3a1aac4434a3299c17208a6273ed7ec15465be2cce70a", size = 12080, upload-time = "2026-08-12T19:33:23.721Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/51/ea/a947e0d0b2478bde44bdc27569ebe577ce46ebd965b589d1b42a59b75805/bean_config-0.2.1-py3-none-any.whl", hash = "sha256:82adfe7aa80b49d8586e038b64d54f63bf97a017b27427c031c65f174ba002f4", size = 9758, upload-time = "2026-08-12T09:00:39.44Z" },
+    { url = "https://files.pythonhosted.org/packages/5c/b2/050015d824bb3f7da7ed8feb4a8baa282eb2ebefb4470436a28eb4685732/bean_config-0.2.2-py3-none-any.whl", hash = "sha256:b18261935f8289bccec67b41dd8f4ad7782f446c8702dac365ed6a48a5c1b459", size = 10152, upload-time = "2026-08-12T19:33:22.462Z" },
 ]
 
 [[package]]
@@ -103,7 +103,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "bean-config", specifier = "==0.2.1" },
+    { name = "bean-config", specifier = "==0.2.2" },
     { name = "cryptography", specifier = ">=50.0.0" },
     { name = "flask", specifier = ">=3.1.3" },
 ]
