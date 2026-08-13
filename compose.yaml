@@ -6,6 +6,10 @@ services:
     container_name: cm-patch
     restart: unless-stopped
 
+
+    extra_hosts: # Note: host so the container can reach our localhost
+      - "host.docker.internal:host-gateway"
+
     command:
       - sh
       - -euc

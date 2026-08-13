@@ -20,6 +20,74 @@ When a contract is completed, `cm-patch`:
 missing completion and propagation steps required to keep the marketplace and
 provider connectors in sync.
 
+### Project structure
+
+```
+cm-patch/
+├── src/
+│   ├── config.py             # app config
+│   ├── deserializer.py       # request generic deserializer
+│   ├── http.py               # enpoints
+│   ├── jwt.py                # creds
+│   ├── models.py             # response models
+│   ├── request.py            # request utils
+│   ├── queue.py              # job queues
+│   ├── resolver.py           # from the event resolve the provider organization
+│   ├── dispatcher.py         # dispatch data to the contract-management
+│   └── utils.py              # utils
+├── data/
+│   ├── certs/                # certificates to sing JWT tokens
+│   │   └── private-key.pem
+│   └── queue/                # backup queues
+│       ├── event/            # - received events to be resolved
+│       └── contract/         # - resolved contract to be dispatched
+├── README.md
+└── main.py                   # app main
+```
+
+### Event handling flow
+
+```
+   .---------------.
+   |    http.py    |
+   |---------------|
+   | receive event |
+   | deserialize   | no (204 No Content, skip)
+   | is_completed? |---X
+   '---------------'
+          | yes (204 No Content, push)
+          V
+   .---------------.
+  (   eventQueue    )<-.
+   `---------------'   |
+          | (head)     |
+          V            |
+   .---------------.   |
+   |  resolver.py  |   |
+   |---------------|   |
+   | PrOrder       |   |
+   | PrOffering    |   |
+   | PrSpec        |   |
+   | Organization  |   | no (pop)
+   | has_cm_url?   |---'
+   '---------------'
+          | yes (push)
+          V
+   .---------------.
+  (  contractQueue  )<-.
+   `---------------'   |
+          | (head)     |
+          V            |
+   .---------------.   |
+   | dispatcher.py |   |
+   |---------------|   |
+   | create JWT    |   | ok (pop)
+   | POST cm API   |---'
+   '---------------'
+          | error (skip)
+          X
+```
+
 ## Dev Setup
 
 Using `uv` for local development:
@@ -60,9 +128,13 @@ test connector, would be sublime, but it's **WIP**, so for now, just
 ```sh
 NS="my-central-marketplace"
 
-kubectl -n "$NS" port-forward \
+kubectl -n "$NS" port-forward --address 0.0.0.0 \
     deployments/tm-forum-api-all-in-one 8081:8080 >/dev/null &
 ```
+
+> **Note**:
+> The `--address 0.0.0.0` is so the containers on the docker compose can reach
+> your `localhost`.
 
 ### Docker Compose
 

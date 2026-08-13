@@ -11,7 +11,7 @@ from typing import (
 )
 
 ################################################################################
-    
+
 @dataclass_transform(frozen_default=True, kw_only_default=True)
 def obj(cls):
     return dataclass(
@@ -23,7 +23,7 @@ def obj(cls):
 ## events ######################################################################
 
 @obj
-class ProductOrderCreateEvent:
+class ProductOrderEvent:
 
     @obj
     class Event:
@@ -31,20 +31,13 @@ class ProductOrderCreateEvent:
 
     eventId: str
     eventTime: str
-    eventType: Literal["ProductOrderCreateEvent"]
+    eventType: Literal[
+        "ProductOrderCreateEvent",
+        "ProductOrderStateChangeEvent",
+        "ProductOrderDeleteEvent",
+    ]
     event: Event
 
-@obj
-class ProductOrderStateChangeEvent:
-
-    @obj
-    class Event:
-        productOrder: ProductOrder
-
-    eventId: str
-    eventTime: str
-    eventType: Literal["ProductOrderStateChangeEvent"]
-    event: Event
 
 ## resources ###################################################################
 
