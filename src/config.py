@@ -3,6 +3,7 @@ import bean.config as config
 from enum import Enum, auto
 from pathlib import Path
 from typing import (
+    Dict,
     Iterable,
     Tuple,
 )
@@ -34,10 +35,13 @@ class Config:
     # HOLDER_KEY_TYPE: str # EC
     # HOLDER_SIGNATURE_ALGORITHM: str # ES256
 
+    HOLDER_PAP_URL: str
+    HOLDER_TIL_URL: str
+
     #* tmf
 
     TMF_URL: str
-    TMF_IGNORE_ORGS: Tuple[str, ...] = tuple()
+    TMF_IGNORE_ORGS: Tuple[str, ...] = tuple() # TODO: not implemented
 
     #* keycloak
 
@@ -80,11 +84,23 @@ class Config:
     def holder_key_path(self) -> Path:
         return self._holder_key_path
 
+    def vc_scope_map(self, scope: str) -> Tuple[str, str, str]|None:
+        """ return (id, fmt, scope) """
+        return self._vc_scope_map.get(scope)
+
     #* normalizers
+    _vc_scope_map: Dict[str, Tuple[str, str, str]] = {}
+    @config.normalizer("VC_CONFIG_IDS", "VC_CONFIG_FORMATS", "VC_CONFIG_SCOPES")
+    def _vc_to_map(self, ids: Tuple[str], fmts: Tuple[str], scopes: Tuple[str]):
+        self._vc_scope_map = {
+            scope: (id, fmt, scope)
+            for id, fmt, scope in zip(ids, fmts, scopes)
+        }
+        return ids, fmts, scopes
 
     _holder_key_path: Path
     @config.normalizer("HOLDER_KEY_PATH")
-    def to_path(self, path: str) -> str:
+    def _to_path(self, path: str) -> str:
         self._holder_key_path = Path(path)
         return path
 

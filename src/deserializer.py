@@ -1,5 +1,5 @@
 import inspect
-from dataclasses import fields, is_dataclass
+from dataclasses import asdict, fields, is_dataclass
 from enum import Enum
 from types import UnionType
 from typing import (
@@ -177,3 +177,21 @@ def try_cast(
             f"Cannot convert {value!r} to {tp}"
         )) from exc
 
+
+def to_json(obj: Any) -> Any:
+    if is_dataclass(obj) and not isinstance(obj, type):
+        return {
+            field.name: to_json(getattr(obj, field.name))
+            for field in fields(obj)
+        }
+
+    if isinstance(obj, Enum):
+        return obj.value
+
+    if isinstance(obj, (list, tuple, set)):
+        return [to_json(x) for x in obj]
+
+    if isinstance(obj, dict):
+        return {k: to_json(v) for k, v in obj.items()}
+
+    return obj

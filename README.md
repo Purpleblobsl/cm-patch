@@ -3,49 +3,88 @@
 **[C]ontract-[M]anagement - [P]atch [A]round [T]MF [C]ontract [H]andling**
 
 `cm-patch` is a lightweight FIWARE Data Space Connector (**FDS**) component
-designed to patch the gaps in the existing `contract-management` flow for
-**central marketplaces**.
+designed to replace the missing/broken/missconfigured order-event functionality
+in the existing `contract-management` flow for **central marketplaces**.
+
+Instead of simply propagating contract/order events, `cm-patch` receives order
+start/stop signals from the central marketplace and dispatches them to the
+configured provider `cm-patch` components. The provider components then apply
+the required configuration changes to their local `odrl-pap` and `til`
+components.
+
+This allows contract completion and termination to result in actual changes to
+the provider connector configuration.
 
 ## Overview
 
-When a contract is completed, `cm-patch`:
+When the `tmf-api` emits product order event, `cm-patch`:
 
-- Emits the appropriate TMF contract completion signals to the contract
-  providers `contract-management`, components, if configured on the organization
-  entity.
-- Sends the corresponding request to the providers `contract-management`
-  component through the **central marketplace**.
+- Receives the order event.
+- Resolves the organizations and providers involved in the order.
+- Determines which providers have `cm-patch` configured.
+- Generates the required **OID4VP** access token for each provider.
+- Sends an authenticated order **start** or **stop** signal to the provider's
+  `cm-patch` component.
+- The provider `cm-patch` component applies the corresponding configuration
+  changes to its **ODRL-PAP** and **TIL** components.
 
-`cm-patch` does not manage the contract lifecycle itself. It simply handles the
+`cm-patch` does not manage the order lifecycle itself. It simply handles the
 missing completion and propagation steps required to keep the marketplace and
 provider connectors in sync.
+
+```
+ [provider]          gen JWT    )      ( [central-marketplace]
+                 .-------------------. (
+   .----------.  |       .--------.  | (
+   | verifier |<-+-------| apisix |<-+ (
+   '----------'    verify'--------'  | (
+ in?|^ |^ |^creds?            | )    | (
+    || || |'---------.        | )    | (
+    || || '---------.|        | )    | (
+    || |'----.pass? ||        | )    | (
+    v| '----v|      v|        | )    | (
+   .-----. .-----. .-----.    | )    | (
+   | til | | pap | | ccs |    | )    | (      .---------.
+   '-----' '-----' '-----'    | )    | (      | tmf-api |
+      ^|     ^|               | )    | (      '---------'
+update||     ||update         | )    | (    Event| ^|resolve ids
+      |v     |v               | )    | (         v |v
+     .----------. /order/x    | )    | (      .----------.
+     | cm-patch |<------------' )    '--------| cm-patch |
+     '----------' .-------------------------. '----------'
+              '---' ok?         )      (    '---^
+                                )      (
+```
 
 ### Project structure
 
 ```
 cm-patch/
-├── src/
-│   ├── config.py             # app config
-│   ├── deserializer.py       # request generic deserializer
-│   ├── http.py               # enpoints
-│   ├── jwt.py                # creds
-│   ├── models.py             # response models
-│   ├── request.py            # request utils
-│   ├── queue.py              # job queues
-│   ├── resolver.py           # from the event resolve the provider organization
-│   ├── dispatcher.py         # dispatch data to the contract-management
-│   └── utils.py              # utils
-├── data/
-│   ├── certs/                # certificates to sing JWT tokens
-│   │   └── private-key.pem
-│   └── queue/                # backup queues
-│       ├── event/            # - received events to be resolved
-│       └── contract/         # - resolved contract to be dispatched
-├── README.md
-└── main.py                   # app main
+|-- src/
+|   |-- config.py             # app config
+|   |-- deserializer.py       # request generic deserializer
+|   |-- dispatcher.py         # dispatch order signals to cm-patch/odrl-pap/til
+|   |-- http.py               # enpoints
+|   |-- jwt.py                # creds
+|   |-- models.py             # response models
+|   |-- queue.py              # job queues (TODO)
+|   |-- request.py            # request utils
+|   |-- resolver.py           # from the event resolve the provider organization
+|   '-- utils.py              # utils
+|-- data/
+|   |-- certs/                # certificates to sing JWT tokens
+|   |   '-- private-key.pem
+|   '-- queue/                # backup queues
+|       |-- event/            # - received events to be resolved
+|       '-- contract/         # - resolved contract to be dispatched
+|-- README.md
+'-- main.py                   # entrypoint
 ```
 
 ### Event handling flow
+
+The service receives the order event and only processes events that represent a
+relevant order state change.
 
 ```
    .---------------.
@@ -82,10 +121,32 @@ cm-patch/
    | dispatcher.py |   |
    |---------------|   |
    | create JWT    |   | ok (pop)
-   | POST cm API   |---'
+   | POST cm-patch |---'
    '---------------'
           | error (skip)
           X
+```
+
+> **Note**:
+> The queue system is currently **WIP**. If an error occurs while processing an
+> event, the event may be dropped and not retried. As a result, healthy events
+> may be lost.
+
+The provider `cm-patch` then receives the order signal:
+
+```
+   .---------------.
+   |    http.py    |    .---------------.
+   |---------------|    |  dispatch.py  |
+   | receive order |ok  |---------------|
+   | deserialize   |--->| is_completed? |
+   '---------------'    '---------------'
+          |error           | ^     | ^ get/post/delete
+          x                | |     | |
+                           v |     v |
+                         .-----. .-----.
+                         | pap | | til |
+                         '-----' '-----'
 ```
 
 ## Dev Setup
@@ -151,10 +212,11 @@ docker compose up
 
 ## Notes
 
-- This component was built to patch an error in the `contract-management`
-  component where completion events were not emitted to the contract providers
-  connectors.
+**Limitations**:
+
 - This component, is meant to work on the version `9.0.4` of the **FDS** chart
+- The `cm-patch`, only issues JWT when dispatching to another `cm-patch`,
+  meaning, the `pap` and `til` must be local.
 
 ## Links
 

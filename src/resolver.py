@@ -3,7 +3,9 @@ from typing import (
     Iterable,
     List,
     Protocol,
+    Sequence,
     Set,
+    Tuple,
 )
 
 from src.deserializer import cast_dataclass
@@ -12,6 +14,7 @@ from .config import Config
 from .request import Request, Response
 from .utils import logger_get
 from .models import (
+    Order,
     ProductOrderEvent,
     ProductOrder,
     ProductOffering,
@@ -25,7 +28,9 @@ class HasId(Protocol):
     @property
     def id(self) -> str: ...
 
-def resolve(event: ProductOrderEvent) -> List[Organization]:
+def resolve(
+    event: ProductOrderEvent,
+) -> Tuple[Sequence[Organization.ContractManagement], Order]:
     def get(url: str) -> Response:
         return Request(
             method="GET",
@@ -63,8 +68,12 @@ def resolve(event: ProductOrderEvent) -> List[Organization]:
 
     order: ProductOrder = event.event.productOrder
 
-    if not order.is_completed:
-        raise ValueError("Product order is not completed")
+    log.info("Fetching related consumer organizations to %s", order.id)
+    consumers: List[Organization] = fetch_ids(
+        Organization, order.get_consumers(),
+    )
+
+    assert consumers
 
     offering_ids: Set[str] = order.get_offerings()
 
@@ -87,15 +96,33 @@ def resolve(event: ProductOrderEvent) -> List[Organization]:
         ProductSpecification, specs_ids,
     )
 
-    orgs_ids: Set[str] = {
+    provider_ids: Set[str] = {
         spec.get_provider()
         for spec in unique_by_id(specs)
     }
 
-    assert orgs_ids
+    assert provider_ids
 
     log.info("Fetching related organizations to %s", order.id)
-    return fetch_ids(
-        Organization, orgs_ids,
+    providers = fetch_ids(
+        Organization, provider_ids,
+    )
+
+    return [
+        cm
+        for org in providers
+        if (cm := org.get_contrat_management_v2()) is not None
+    ], Order(
+        id=order.id,
+        is_completed=order.is_completed,
+        productSpecCharacteristic=[
+            characteristic
+            for spec in specs
+            for characteristic in spec.productSpecCharacteristic
+        ],
+        consumers=[
+            Order.Consumer(did=org.did)
+            for org in consumers
+        ]
     )
         

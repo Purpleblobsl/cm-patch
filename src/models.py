@@ -38,6 +38,19 @@ class ProductOrderEvent:
     ]
     event: Event
 
+## order #######################################################################
+
+@obj
+class Order:
+
+    @obj
+    class Consumer:
+        did: str
+
+    id: str
+    is_completed: bool
+    productSpecCharacteristic: List[Dict[str,Any]] = field(default_factory=list)
+    consumers: List[Consumer] = field(default_factory=list)
 
 ## resources ###################################################################
 
@@ -68,6 +81,12 @@ class ProductOrder:
     productOrderItem: List[ProductOrderItem] = field(default_factory=list)
     relatedParty: List[RelatedParty] = field(default_factory=list)
     state: Optional[str] = None
+
+    def get_consumers(self) -> Set[str]:
+        return {
+            party.id
+            for party in self.relatedParty
+        }
 
     def get_offerings(self) -> Set[str]:
         return {
@@ -144,7 +163,7 @@ class Organization:
 
     @obj
     class ContractManagement:
-        addres: str
+        address: str
         clientId: str
         scope: str
 
@@ -155,14 +174,15 @@ class Organization:
     externalReference: List[Dict[str, Any]] = field(default_factory=list)
     partyCharacteristic: List[PartyCharacteristic] = field(default_factory=list)
 
-    def get_did(self) -> str:
-        for ref in self.externalReference:
-            if ref.get("name") == "did":
-                return ref["value"]
-
+    @property
+    def did(self) -> str:
         for char in self.partyCharacteristic:
             if char.name == "did":
                 return char.value
+
+        for ref in self.externalReference:
+            if ref.get("name") == "did":
+                return ref["value"]
 
         raise ValueError("Invalid organization: has no did reference")
 
@@ -171,10 +191,21 @@ class Organization:
             if char.name == "contractManagement":
                 assert(isinstance(char.value, Dict))
                 return self.ContractManagement(
-                    addres=char.value["addres"],
+                    address=char.value["address"],
                     clientId=char.value["clientId"],
                     scope=char.value["scope"],
                 )
 
         return None
 
+    def get_contrat_management_v2(self) -> Optional[ContractManagement]:
+        for char in self.partyCharacteristic:
+            if char.name == "contractManagementV2":
+                assert(isinstance(char.value, Dict))
+                return self.ContractManagement(
+                    address=char.value["address"],
+                    clientId=char.value["clientId"],
+                    scope=char.value["scope"],
+                )
+
+        return None

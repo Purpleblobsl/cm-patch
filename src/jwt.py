@@ -219,6 +219,7 @@ def check_credential_format(
         )
 
 def issue_vc(
+    *,
     credential_id: str,
     format: str
 ) -> str:
@@ -285,7 +286,7 @@ def get_token_endpoint(target_url: str) -> str:
 def sign_jwt(
     did: str,
     verifiable_credential: str,
-    key_path: str,
+    key_path: Path,
 ) -> str:
     header: Dict[str, str] = {
         "alg": "ES256",
@@ -346,18 +347,14 @@ def sign_jwt(
     return f"{signing_input}.{signature_b64}"
 
 def get_oid4vp_access_token(
+    *,
     target_url: str,
     did: str,
     verifiable_credential: str,
-    key_path: str,
+    key_path: Path,
     scope: str,
 ) -> str:
     log.info("Issuing oid4vp access token for '%s'", target_url)
-
-    key = Path(key_path)
-
-    if not key.is_file():
-        raise RuntimeError(f"Private key '{key_path}' not found")
 
     log.info("Getting token endpoint")
     token_endpoint = get_token_endpoint(target_url)
