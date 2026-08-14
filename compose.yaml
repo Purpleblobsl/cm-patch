@@ -35,6 +35,10 @@ services:
       HOLDER_DID: ${HOLDER_DID}
       HOLDER_KEY_PATH: /certs/private-key.pem
 
+      HOLDER_DSC_URL: ${HOLDER_DSC_URL}
+      HOLDER_PAP_URL: ${HOLDER_PAP_URL}
+      HOLDER_TIL_URL: ${HOLDER_TIL_URL}
+
       #* tmf
       TMF_URL: ${TMF_URL}
       TMF_IGNORE_ORGS: ${TMF_IGNORE_ORGS}

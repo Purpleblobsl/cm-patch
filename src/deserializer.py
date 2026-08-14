@@ -1,5 +1,5 @@
 import inspect
-from dataclasses import asdict, fields, is_dataclass
+from dataclasses import fields, is_dataclass
 from enum import Enum
 from types import UnionType
 from typing import (

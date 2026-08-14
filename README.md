@@ -187,10 +187,16 @@ test connector, would be sublime, but it's **WIP**, so for now, just
 `port-forward` the services:
 
 ```sh
-NS="my-central-marketplace"
+NS_CM="my-central-marketplace"
+NS_P="my-provider"
 
-kubectl -n "$NS" port-forward --address 0.0.0.0 \
+kubectl -n "$NS_CM" port-forward --address 0.0.0.0 \
     deployments/tm-forum-api-all-in-one 8081:8080 >/dev/null &
+
+kubectl port-forward -n "$NS_P" --address 0.0.0.0\
+  deployments/odrl-pap 8082:8080 >/dev/null &
+kubectl port-forward -n "$NS_P" --address 0.0.0.0\
+  deployments/trusted-issuers-list 8083:8080 >/dev/null &
 ```
 
 > **Note**:

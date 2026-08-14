@@ -17,7 +17,7 @@ log = logger_get(__name__)
 
 @dataclass(frozen=True, slots=True)
 class Request:
-    method: Literal["GET", "POST"]
+    method: Literal["GET", "POST", "DELETE", "PUT"]
     url: str
     headers: Dict[str, str] | None = None
     params: Dict[str, Any] | None = None

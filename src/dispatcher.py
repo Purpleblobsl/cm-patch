@@ -2,11 +2,13 @@
 from typing import (
     Any,
     Dict,
+    List,
     Sequence,
+    Set,
 )
 
-from .deserializer import to_json
-from .models import Order, Organization
+from .deserializer import to_json, try_cast
+from .models import Order, Organization, PolicyConfig
 from .request import Response, Request
 from .utils import logger_get
 from .jwt import issue_vc, get_oid4vp_access_token
@@ -22,10 +24,35 @@ def _post(
 ) -> Response:
     return Request(
         method="POST",
-        headers=headers if headers is not None else {},
         url=url,
+        headers=headers if headers is not None else {},
         data=to_json(data),
         json=True,
+    ).fetch().raise_for_status()
+
+def _get(
+    url: str,
+    headers: Dict[str,str]|None = None,
+) -> Response:
+    headers = headers or {}
+    headers["Accept"] = "application/json"
+
+    return Request(
+        method="GET",
+        url=url,
+        headers=headers,
+    ).fetch().raise_for_status()
+
+def _delete(
+    url: str,
+    headers: Dict[str,str]|None = None,
+) -> Response:
+    headers = headers or {}
+
+    return Request(
+        method="DELETE",
+        url=url,
+        headers=headers,
     ).fetch().raise_for_status()
 
 def dispatch_cm_patch(
@@ -84,7 +111,30 @@ def dispatch_cm_patch(
 def dispatch_pap(
     order: Order,
     create_or_patch: bool,
-): ... # TODO
+):
+    policies: List[PolicyConfig] = PolicyConfig.from_oder(order)
+    p_ids: Set[str] = {
+        policy.policy["@id"]
+        for policy in policies
+    }
+
+    url = f"{Config.HOLDER_PAP_URL}/{PolicyConfig.ENDPOINT}"
+
+    pap_ids: List[Dict[str, Any]] = [
+        d["id"]
+        for d in _get(url).data
+        if d["odrl:uid"] in p_ids
+    ]
+
+    log.info("Deleting matching policies")
+    for id in pap_ids:
+        _delete(f"{url}/{id}")
+
+    if not create_or_patch: return
+
+    log.info("Uploading policies")
+    for policy in policies:
+        _post(url, policy.policy)
 
 def dispatch_til(
     order: Order,

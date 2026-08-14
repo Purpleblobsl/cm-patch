@@ -35,6 +35,7 @@ class Config:
     # HOLDER_KEY_TYPE: str # EC
     # HOLDER_SIGNATURE_ALGORITHM: str # ES256
 
+    HOLDER_DSC_URL: str = "https://example.com"
     HOLDER_PAP_URL: str
     HOLDER_TIL_URL: str
 
@@ -103,6 +104,17 @@ class Config:
     def _to_path(self, path: str) -> str:
         self._holder_key_path = Path(path)
         return path
+
+    _holder_key_path: Path
+    @config.normalizer(
+        "KC_URL",
+        "HOLDER_DSC_URL",
+        "HOLDER_PAP_URL",
+        "HOLDER_TIL_URL",
+        series=True,
+    )
+    def _rstrip_slash(self, url: str) -> str:
+        return url.rstrip("/")
 
     #* validators
 
