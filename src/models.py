@@ -1,8 +1,10 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import (
     Any,
     ClassVar,
+    Container,
     Dict,
+    Iterable,
     List,
     Literal,
     Optional,
@@ -12,8 +14,8 @@ from typing import (
 
 from src.config import Config
 
-df_list = field(default_factory=list)
-df_dict = field(default_factory=dict)
+df_list = lambda: field(default_factory=list)
+df_dict = lambda: field(default_factory=dict)
 
 ################################################################################
 
@@ -48,6 +50,9 @@ class ProductOrderEvent:
 @obj
 class Order:
 
+    ENDPOINT_START = "/order/start"
+    ENDPOINT_STOP = "/order/stop"
+
     @obj
     class Consumer:
         did: str
@@ -57,25 +62,25 @@ class Order:
         @obj
         class Value:
             isDefault: bool = True
-            value: Dict[str, Any] = df_dict
+            value: Dict[str, Any] = df_dict()
 
         id: str
         name: str
         valueType: str
-        productSpecCharacteristicValue: List[Value] = df_list
+        productSpecCharacteristicValue: List[Value] = df_list()
 
     id: str
     is_completed: bool
-    productSpecCharacteristic: List[ProductSpecCharacteristic] = df_list
-    consumers: List[Consumer] = df_list
+    productSpecCharacteristic: List[ProductSpecCharacteristic] = df_list()
+    consumers: List[Consumer] = df_list()
 
-# https://mp-operation.org/policy/common/k8s-full-urn:ngsi-ld:product-order:a81490df-48f5-48e2-aa9b-222b9271b9fb
 @obj
 class PolicyConfig:
+    """ This model can't be used to deserialize, just pray and post """
 
     ENDPOINT = "/policy"
 
-    policy: Dict[str, Any] = df_dict
+    policy: Dict[str, Any] = df_dict()
 
     @staticmethod
     def from_oder(order: Order) -> List[PolicyConfig]:
@@ -102,14 +107,24 @@ class CredentialsConfig:
         class Claim:
             name: str
             path: str
-            allowedValues: List[str] = df_list
+            allowedValues: List[str] = df_list()
 
         credentialsType: str
-        claims: List[Claim] = df_list
-        vaidFor: Dict[str, Any] = df_dict
+        claims: List[Claim] = df_list()
+        vaidFor: Dict[str, Any] = df_dict()
 
     did: str
-    credentials: List[Credential] = df_list
+    credentials: List[Credential] = df_list()
+
+    def filter_out(self, credentialsTypes: Container[str]) -> CredentialsConfig:
+        return replace(
+            self,
+            credentials=[
+                cred
+                for cred in self.credentials
+                if cred.credentialsType not in credentialsTypes
+            ],
+        )
 
     @staticmethod
     def from_oder(order: Order) -> List[CredentialsConfig]:
@@ -130,8 +145,6 @@ class CredentialsConfig:
                 )
 
         return configs
-
-
 
 ## resources ###################################################################
 
@@ -159,8 +172,8 @@ class ProductOrder:
     id: str
     href: str
     orderDate: str
-    productOrderItem: List[ProductOrderItem] = df_list
-    relatedParty: List[RelatedParty] = df_list
+    productOrderItem: List[ProductOrderItem] = df_list()
+    relatedParty: List[RelatedParty] = df_list()
     state: Optional[str] = None
 
     def get_consumers(self) -> Set[str]:
@@ -218,8 +231,8 @@ class ProductSpecification:
     lifecycleStatus: str
     name: str
     version: str
-    productSpecCharacteristic: List[Dict[str,Any]] = df_list
-    relatedParty: List[RelatedParty] = df_list
+    productSpecCharacteristic: List[Dict[str,Any]] = df_list()
+    relatedParty: List[RelatedParty] = df_list()
 
     def get_provider(self) -> str:
         for party in self.relatedParty:
@@ -252,8 +265,8 @@ class Organization:
     href: str
     name: Optional[str] = None
     tradingName: Optional[str] = None
-    externalReference: List[Dict[str, Any]] = df_list
-    partyCharacteristic: List[PartyCharacteristic] = df_list
+    externalReference: List[Dict[str, Any]] = df_list()
+    partyCharacteristic: List[PartyCharacteristic] = df_list()
 
     @property
     def did(self) -> str:
@@ -290,3 +303,4 @@ class Organization:
                 )
 
         return None
+

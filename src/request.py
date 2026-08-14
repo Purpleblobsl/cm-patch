@@ -25,6 +25,15 @@ class Request:
     json: bool = True
 
     def fetch(self) -> Response:
+        def parse_response_body(raw: bytes) -> Any:
+            if not raw: return None
+
+            try:
+                return json.loads(raw) if raw else None
+            except json.JSONDecodeError:
+                return raw.decode(errors="replace")
+
+
         url = self.url
 
         if self.params:
@@ -56,21 +65,14 @@ class Request:
                 response = Response(
                     status=response.status,
                     headers=dict(response.headers),
-                    data=json.loads(response.read()),
+                    data=parse_response_body(response.read()),
                 )
 
         except HTTPError as e:
-            raw = e.read()
-
-            try:
-                data = json.loads(raw)
-            except json.JSONDecodeError:
-                data = raw.decode(errors="replace")
-
             response = Response(
                 status=e.code,
                 headers=dict(e.headers),
-                data=data,
+                data=parse_response_body(e.read()),
             )
 
         log.debug("Response:\n%s", response)
@@ -117,6 +119,10 @@ class Response:
     @property
     def ok(self) -> bool:
         return 200 <= self.status < 300
+
+    @property
+    def not_found(self) -> bool:
+        return self.status == 404
 
     def __bool__(self):
         return self.ok

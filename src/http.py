@@ -124,11 +124,11 @@ def tmf_event() -> ResponseReturn:
 
     return "", 204
 
-@enpoint("/order/start", method="post")
+@enpoint(Order.ENDPOINT_START, method="post")
 def order_start() -> ResponseReturn:
     return order_handle(start=True)
 
-@enpoint("/order/end", method="post")
+@enpoint(Order.ENDPOINT_STOP, method="post")
 def order_end() -> ResponseReturn:
     return order_handle(start=False)
 
@@ -149,6 +149,11 @@ def order_handle(start: bool) -> ResponseReturn:
         return {"error": str(exc)}, 400
 
     log.debug("Deserialized Order:\n%s", order)
+
+    if not order.consumers:
+        log.info("No consumers configured, skipping...")
+        return "", 204
+
 
     try:
         dispatch_til(order, create_or_patch=start)
