@@ -179,7 +179,7 @@ def get_credential(
     ).fetch().raise_for_status()
 
     try:
-        return response.data["credential"], datetime.now()
+        return response.data["credential"], datetime.now(timezone.utc)
     except KeyError:
         raise RuntimeError(
             "Credential response did not contain 'credential'"
