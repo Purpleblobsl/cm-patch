@@ -92,7 +92,7 @@ def dispatch_cm_patch(
         url = f"{cm.address}{endpoint}"
         vc = scope_to_vc.get(cm.scope)
         if vc is None:
-            log.error("Unknown scope '%s', skipping...")
+            log.error("Unknown scope '%s', skipping...", cm.scope)
             continue
 
         try:
