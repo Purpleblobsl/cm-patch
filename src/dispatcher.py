@@ -7,13 +7,12 @@ from typing import (
     Set,
 )
 
-from .deserializer import cast_dataclass, to_json
-from .models import CredentialsConfig, Order, Organization, PolicyConfig
-from .request import Response, Request
-from .utils import logger_get
-from .jwt import issue_vc, get_oid4vp_access_token
 from .config import Config
-
+from .deserializer import cast_dataclass, to_json
+from .jwt import get_oid4vp_access_token, issue_vc
+from .models import CredentialsConfig, Order, Organization, PolicyConfig
+from .request import Request, Response
+from .utils import logger_get
 
 log = logger_get(__name__)
 
@@ -88,12 +87,12 @@ def dispatch_cm_patch(
         endpoint = Order.ENDPOINT_STOP
 
     for cm in cms:
-        log.info("Dispatching to %", cm.address)
+        log.info("Dispatching to %s", cm.address)
 
         url = f"{cm.address}{endpoint}"
         vc = scope_to_vc.get(cm.scope)
         if vc is None:
-            log.error("Unknown scope '%s', skipping...")
+            log.error("Unknown scope '%s', skipping...", cm.scope)
             continue
 
         try:

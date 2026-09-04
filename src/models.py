@@ -236,7 +236,7 @@ class ProductSpecification:
 
     def get_provider(self) -> str:
         for party in self.relatedParty:
-            if party.role == "provider":
+            if party.role in ["provider", "seller"]:
                 return party.id
 
         raise ValueError(
