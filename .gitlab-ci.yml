@@ -14,4 +14,3 @@ include:
     ref: 'main'
     file: '/ci/docker.yml'
 
-

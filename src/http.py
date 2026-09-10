@@ -20,32 +20,16 @@ from .models import (
 from .resolver import resolve
 from .utils import http_code_to_string, logger_get
 
-log = logger_get(__name__)
+#-------------------------------------------------------------------------------
 
 type ResponseReturn = Tuple[str|Mapping[str, Any], int]
 type EndpointFn = Callable[[], ResponseReturn]
 type HttpMethod = Literal["get", "post"]
 
-################################################################################
+log = logger_get(__name__)
 
 # Accumulate endpoints here before creating the Flask application.
 endpoints: Dict[HttpMethod, Dict[str, EndpointFn]] = {}
-
-def create_server(name: str) -> Flask:
-    app = Flask(name)
-
-    for method, paths in endpoints.items():
-        register = getattr(app, method)
-
-        for path, fn in paths.items():
-            register(
-                path,
-                strict_slashes=False
-            )(fn)
-
-    return app
-
-################################################################################
 
 def enpoint(path: str, method: HttpMethod):
 
@@ -86,6 +70,25 @@ def enpoint(path: str, method: HttpMethod):
         return fn
 
     return register
+
+#- server ----------------------------------------------------------------------
+
+def create_server(name: str) -> Flask:
+    app = Flask(name)
+
+    for method, paths in endpoints.items():
+        register = getattr(app, method)
+
+        for path, fn in paths.items():
+            register(
+                path,
+                strict_slashes=False
+            )(fn)
+
+    return app
+
+#- enpoints --------------------------------------------------------------------
+
 @enpoint("/health", method="get")
 def health() -> ResponseReturn:
     return {"status": "ok"}, 200
@@ -104,18 +107,51 @@ def tmf_event() -> ResponseReturn:
         event = cast_dataclass(ProductOrderEvent, data, extra="ignore")
 
     except (TypeError, ValueError) as exc:
-        log.error("Invalid TMF event: %s", exc)
-        return {"error": str(exc)}, 400
+        log.exception("Invalid TMF product order event")
+        return {"error": "Invalid TMF product order event"}, 400
 
-    log.debug("Deserialized TMF event:\n%s", event)
+    log.info("Catched %s: %s...", event.eventType, event.eventId)
 
     if event.eventType != "ProductOrderStateChangeEvent":
-        log.info("Catched '%s', skipping...", event.eventType)
+        log.info(
+            "Event %s is not a 'ProductOrderStateChangeEvent', skipping...",
+            event.eventId,
+        )
         return "", 204
 
     cms, order = resolve(event)
-    log.debug("Resolved provider organizations (%s) linked to the order:\n%s",
-              len(cms), order)
+
+    if order is None:
+        log.error("No order was generated from event, skipping...")
+        return "", 404
+
+    if not order.customers:
+        log.error(
+            "No customers related to %s, skipping...",
+            event.eventId,
+        )
+        return "", 404
+
+    if not cms:
+        log.info(
+            "No cm-patch configured in related sellers to %s, skipping...",
+            event.eventId,
+        )
+        return "", 204
+
+    if not order.credentialsConfigurations and not order.authorizationPolicies:
+        log.info(
+            "No credentials configurations or authorization policies "
+            "configured in related product specifications to %s, skipping...",
+            event.eventId,
+        )
+        return "", 204
+
+    log.debug(
+        "Resolved seller organizations (%s) linked to the order:\n%s",
+        len(cms),
+        order,
+    )
 
     try:
         dispatch_cm_patch(order, cms)
@@ -150,17 +186,16 @@ def order_handle(start: bool) -> ResponseReturn:
 
     log.debug("Deserialized Order:\n%s", order)
 
-    if not order.consumers:
-        log.info("No consumers configured, skipping...")
+    if not order.customers:
+        log.info("No customers configured, skipping...")
         return "", 204
-
 
     try:
         dispatch_til(order, create_or_patch=start)
         dispatch_pap(order, create_or_patch=start)
 
     except Exception as exc:
-        log.error("Failed to dispatch: %s", exc)
+        log.exception("Failed to dispatch: %s")
         return {"error": str(exc)}, 400
 
     return "", 204

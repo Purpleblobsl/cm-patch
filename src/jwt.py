@@ -2,7 +2,13 @@ import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+)
 
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -12,13 +18,15 @@ from .config import Config
 from .request import Request, Response
 from .utils import base64url_encode, logger_get
 
+#-------------------------------------------------------------------------------
+
 log = logger_get(__name__)
 
 PRE_AUTHORIZED_CODE = (
     "urn:ietf:params:oauth:grant-type:pre-authorized_code"
 )
 
-################################################################################
+#- cache -----------------------------------------------------------------------
 
 @dataclass(frozen=True, slots=True)
 class CachedCredential:
@@ -61,7 +69,7 @@ class VCCache:
             expires_at=expires_at,
         )
 
-################################################################################
+#- vc --------------------------------------------------------------------------
 
 def get_access_token() -> str:
     response: Response = Request(
@@ -266,7 +274,9 @@ def issue_vc(
 
     return vc
 
-def get_token_endpoint(target_url: str) -> str:
+#- oid4vp ----------------------------------------------------------------------
+
+def get_token_endpoint_and_scopes(target_url: str) -> Tuple[str, List[str]]:
     response: Response = Request(
         method="GET",
         url=f"{target_url}/.well-known/openid-configuration",
@@ -276,7 +286,10 @@ def get_token_endpoint(target_url: str) -> str:
     ).fetch().raise_for_status()
 
     try:
-        return response.data["token_endpoint"]
+        return (
+            response.data["token_endpoint"],
+            response.data["scopes_supported"],
+        )
 
     except KeyError:
         raise RuntimeError(
@@ -353,12 +366,22 @@ def get_oid4vp_access_token(
     verifiable_credential: str,
     key_path: Path,
     scope: str,
-) -> str:
+) -> str|None:
     log.info("Issuing oid4vp access token for '%s'", target_url)
 
     log.info("Getting token endpoint")
-    token_endpoint = get_token_endpoint(target_url)
+    token_endpoint, scopes = get_token_endpoint_and_scopes(target_url)
     log.debug("Token endpoint: %s", token_endpoint)
+    log.debug("Token scopes: %s", scopes)
+
+    if scope not in scopes:
+        log.error(
+            "Configured scope '%s' for %s doesn't match any avaible scopes: %s",
+            scope,
+            did,
+            scopes,
+        )
+        return None
 
     log.info("Signing JWT")
     vp_token = sign_jwt(

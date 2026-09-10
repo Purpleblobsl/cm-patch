@@ -1,18 +1,15 @@
-
 from typing import (
+    Any,
     Iterable,
     List,
-    Protocol,
+    Optional,
     Sequence,
     Set,
     Tuple,
 )
 
-from src.deserializer import cast_dataclass
-
 from .config import Config
-from .request import Request, Response
-from .utils import logger_get
+from .deserializer import cast_dataclass
 from .models import (
     Order,
     ProductOrderEvent,
@@ -21,16 +18,21 @@ from .models import (
     ProductSpecification,
     Organization,
 )
+from .request import Request, Response
+from .utils import HasId, logger_get, unique_by_id
+
+# ------------------------------------------------------------------------------
 
 log = logger_get(__name__)
 
-class HasId(Protocol):
-    @property
-    def id(self) -> str: ...
+# ------------------------------------------------------------------------------
 
 def resolve(
     event: ProductOrderEvent,
-) -> Tuple[Sequence[Organization.ContractManagement], Order]:
+) -> Tuple[List[Organization.CmPatch], Optional[Order]]:
+    if event.eventType != "ProductOrderStateChangeEvent":
+        raise ValueError(f"Unexpected event type: {event.eventType}")
+
     def get(url: str) -> Response:
         return Request(
             method="GET",
@@ -40,89 +42,119 @@ def resolve(
             },
         ).fetch().raise_for_status()
 
-    def unique_by_id[T: HasId](objs: Iterable[T]) -> List[T]:
-        out: List[T] = []
-        seen = set()
-        for obj in objs:
-            if obj.id not in seen:
-                seen.add(obj.id)
-                out.append(obj)
-        return out
-
-    def fetch_ids[T](obj_t: type[T], ids: Iterable[str]) -> List[T]:
+    def fetch_ids[T: HasId](obj_t: type[T], ids: Iterable[str]) -> List[T]:
         objs: List[T] = []
+        endpoint = f"{Config.TMF_URL}{getattr(obj_t, "ENDPOINT")}"
 
-        for id in ids:
-            response: Response = get(
-                f"{Config.TMF_URL}{getattr(obj_t, "ENDPOINT")}/{id}"
-            )
+        log.debug(
+            "Fetching to endpoint '%s' ids %s related to order: %s",
+            endpoint,
+            ids,
+            order.id,
+        )
 
-            objs.append(
-                cast_dataclass(obj_t, response.data)
-            )
+        return [
+            cast_dataclass(obj_t, get(f"{endpoint}/{id}").data)
+            for id in ids
+        ]
+
+    def fetch[T: HasId](
+        obj_t: type[T],
+        ids: Iterable[str],
+        resources: str,
+    ) -> List[T]:
+        if not ids:
+            log.warning("No %s related to %s", resources, order.id)
+            return []
+
+        log.info("Fetching related %s to %s", resources, order.id)
+        objs: List[T] = unique_by_id(fetch_ids(
+            obj_t, ids,
+        ))
+
+        if not objs:
+            log.warning("No %s related to %s", resources, order.id)
+            return []
+
+        log.debug("Deserialized %s:\n%s", resources, objs)
 
         return objs
 
-    if event.eventType != "ProductOrderStateChangeEvent":
-        raise ValueError(f"Unexpected event type: {event.eventType}")
+    # Resource relation paths:
+    #   event.relatedParty[] | (.role?) | .id
+    #     -> customers: organization
+    #     -> sellers: organization
+    #
+    #   event.productOrder.productOrderItem[].id
+    #     -> product-offering.productSpecification.id
+    #     -> product-specification
+
 
     order: ProductOrder = event.event.productOrder
+    sellers_ids: Set[str] = order.get_sellers()
 
-    log.info("Fetching related consumer organizations to %s", order.id)
-    consumers: List[Organization] = fetch_ids(
-        Organization, order.get_consumers(),
+    # TODO: we don't handle bundledProductOffering...
+    offerings: List[ProductOffering] = fetch(
+        ProductOffering,
+        order.get_offerings(),
+        "offerings",
     )
 
-    assert consumers
+    if not offerings: return [], None
 
-    offering_ids: Set[str] = order.get_offerings()
-
-    assert offering_ids
-
-    log.info("Fetching related product offerings to %s", order.id)
-    offerings: List[ProductOffering] = fetch_ids(
-        ProductOffering, offering_ids,
+    specs: List[ProductSpecification] = fetch(
+        ProductSpecification,
+        {
+            offering.productSpecification.id
+            for offering in offerings
+        },
+        "specifications",
     )
 
-    specs_ids: Set[str] = {
-        offering.productSpecification.id
-        for offering in unique_by_id(offerings)
-    }
+    if not specs: return [], None
 
-    assert specs_ids
-
-    log.info("Fetching related product specifications to %s", order.id)
-    specs: List[ProductSpecification] = fetch_ids(
-        ProductSpecification, specs_ids,
+    # Note: maybe this is not necessary...
+    sellers_ids.update(
+        seller
+        for spec in specs
+        for seller in spec.get_sellers()
     )
 
-    provider_ids: Set[str] = {
-        spec.get_provider()
-        for spec in unique_by_id(specs)
-    }
-
-    assert provider_ids
-
-    log.info("Fetching related organizations to %s", order.id)
-    providers = fetch_ids(
-        Organization, provider_ids,
+    sellers: List[Organization] = fetch(
+        Organization,
+        sellers_ids,
+        "seller organizations",
     )
 
-    return [
+    if not sellers: return [], None
+
+    customers: List[Organization] = fetch(
+        Organization,
+        order.get_customers(),
+        "customer organizations",
+    )
+
+    return list({
         cm
-        for org in providers
-        if (cm := org.get_contrat_management_v2()) is not None
-    ], Order(
+        for seller in sellers
+        if (cm := seller.get_cm_patch()) is not None
+    }), Order(
         id=order.id,
         is_completed=order.is_completed,
-        productSpecCharacteristic=[
-            characteristic
+        authorizationPolicies=unique_by_id(
+            ap
             for spec in specs
-            for characteristic in spec.productSpecCharacteristic
-        ],
-        consumers=[
-            Order.Consumer(did=org.did)
-            for org in consumers
-        ]
+            for ap in spec.get_authorization_policy()
+        ),
+        credentialsConfigurations=unique_by_id(
+            cc
+            for spec in specs
+            for cc in spec.get_credential_configs()
+        ),
+        customers=list({
+            Order.Customer(did=did)
+            for customer in customers
+            if (did := customer.get_did()) is not None
+        })
     )
         

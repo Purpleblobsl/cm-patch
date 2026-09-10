@@ -12,6 +12,8 @@ from typing import (
     get_type_hints,
 )
 
+#-------------------------------------------------------------------------------
+
 def cast_dataclass[T](
     tp: type[T],
     value: Mapping[str, Any],
@@ -171,7 +173,7 @@ def try_cast(
 
     # Primitive / other types
     try:
-        return tp(value)
+        return tp(value) # type:ignore
     except (TypeError, ValueError) as exc:
         raise type(exc)(e_msg(
             f"Cannot convert {value!r} to {tp}"

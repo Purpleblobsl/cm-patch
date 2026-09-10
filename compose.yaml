@@ -18,7 +18,7 @@ services:
         uv run main.py
 
     ports:
-      - "${APP_PORT}:${APP_PORT}"
+      - "${APP_PORT:-8080}:${APP_PORT:-8080}"
 
     volumes: # Note: mount local directory so there is no need to rebuild image
       - .:/app
@@ -30,6 +30,7 @@ services:
       APP_MODE: ${APP_MODE}
       APP_NAME: ${APP_NAME}
       APP_PORT: ${APP_PORT}
+      APP_LOG_LEVEL: ${APP_LOG_LEVEL}
 
       #* holder
       HOLDER_DID: ${HOLDER_DID}

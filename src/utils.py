@@ -1,12 +1,16 @@
 from http import HTTPStatus
 import base64, logging
+from re import S
+from typing import Iterable, List, Protocol, Set
 
-from .config import Mode
+from .config import LogLevel
+
+#-------------------------------------------------------------------------------
 
 def logger_get(name: str) -> logging.Logger:
     return logging.getLogger(name)
 
-def logger_init_root(mode: Mode):
+def logger_init_root(level: LogLevel):
     class ColorFormatter(logging.Formatter):
         RESET = "\033[0m"
 
@@ -31,7 +35,11 @@ def logger_init_root(mode: Mode):
     ))
 
     logging.basicConfig(
-        level=logging.DEBUG if mode.is_debug else logging.INFO,
+        level=(
+            logging.DEBUG   if level == LogLevel.DEBUG else
+            logging.INFO    if level == LogLevel.INFO  else
+            logging.WARNING
+        ),
         handlers=[handler],
         force=True,
     )
@@ -41,3 +49,16 @@ def base64url_encode(data: bytes) -> str:
 
 def http_code_to_string(code: int) -> str:
     return HTTPStatus(code).phrase
+
+class HasId(Protocol):
+    @property
+    def id(self) -> str: ...
+
+def unique_by_id[T: HasId](objs: Iterable[T]) -> List[T]:
+    out: List[T] = []
+    seen: Set[str] = set()
+    for obj in objs:
+        if obj.id not in seen:
+            seen.add(obj.id)
+            out.append(obj)
+    return out

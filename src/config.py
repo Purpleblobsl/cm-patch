@@ -8,17 +8,18 @@ from typing import (
     Tuple,
 )
 
+#-------------------------------------------------------------------------------
+
 class Mode(Enum):
-    DEBUG   = auto()
     DEV     = auto()
     PROD    = auto()
 
-    @property
-    def is_debug(self) -> bool:
-        return self == self.DEBUG
+class LogLevel(Enum):
+    DEBUG   = auto()
+    INFO    = auto()
+    WARN    = auto()
 
-type Primitive  = bool|int|float|str|Enum
-type FieldValue = Primitive|list[Primitive]|tuple[Primitive,...]|set[Primitive]
+#- config ----------------------------------------------------------------------
 
 @config.load(priorities=["envs", "defaults"])
 class Config:
@@ -27,6 +28,7 @@ class Config:
     APP_MODE: Mode
     APP_NAME: str = "cm-patch"
     APP_PORT: int = 8080
+    APP_LOG_LEVEL: LogLevel = LogLevel.INFO
 
     #* holder
 
@@ -90,6 +92,7 @@ class Config:
         return self._vc_scope_map.get(scope)
 
     #* normalizers
+
     _vc_scope_map: Dict[str, Tuple[str, str, str]] = {}
     @config.normalizer("VC_CONFIG_IDS", "VC_CONFIG_FORMATS", "VC_CONFIG_SCOPES")
     def _vc_to_map(self, ids: Tuple[str], fmts: Tuple[str], scopes: Tuple[str]):

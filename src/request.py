@@ -13,7 +13,11 @@ from urllib.request import urlopen
 
 from .utils import http_code_to_string, logger_get
 
+# ------------------------------------------------------------------------------
+
 log = logger_get(__name__)
+
+# ------------------------------------------------------------------------------
 
 @dataclass(frozen=True, slots=True)
 class Request:
@@ -32,7 +36,6 @@ class Request:
                 return json.loads(raw) if raw else None
             except json.JSONDecodeError:
                 return raw.decode(errors="replace")
-
 
         url = self.url
 
@@ -76,7 +79,6 @@ class Request:
             )
 
         log.debug("Response:\n%s", response)
-
         log.info(
             "%s %s | %s %s",
             response.status,

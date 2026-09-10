@@ -1,4 +1,3 @@
-
 from typing import (
     Any,
     Dict,
@@ -13,6 +12,8 @@ from .jwt import get_oid4vp_access_token, issue_vc
 from .models import CredentialsConfig, Order, Organization, PolicyConfig
 from .request import Request, Response
 from .utils import logger_get
+
+#-------------------------------------------------------------------------------
 
 log = logger_get(__name__)
 
@@ -62,9 +63,11 @@ def _delete(
         headers=headers,
     ).fetch().raise_for_status()
 
+#- dispatch_x ------------------------------------------------------------------
+
 def dispatch_cm_patch(
     order: Order,
-    cms: Sequence[Organization.ContractManagement],
+    cms: Sequence[Organization.CmPatch],
 ):
     def post(url: str, token: str) -> Response:
         return _post(
@@ -73,18 +76,21 @@ def dispatch_cm_patch(
             headers={ "Authorization": f"Bearer {token}" },
         )
 
+    if order.is_completed:
+        log.info("Order is completed, dispatching start signals")
+        endpoint = Order.ENDPOINT_START
+
+    else:
+        log.info("Order is not completed, dispatching stop signals")
+        endpoint = Order.ENDPOINT_STOP
+
+    log.info("Issuing VCs...")
     scope_to_vc: Dict[str, str] = {
         cm.scope: issue_vc(credential_id=t[0], format=t[1])
         for cm in cms
         if (t := Config.vc_scope_map(cm.scope)) is not None
     }
-
-    if order.is_completed:
-        log.info("Order is completed, dispatching start signals")
-        endpoint = Order.ENDPOINT_START
-    else:
-        log.info("Order is not completed, dispatching stop signals")
-        endpoint = Order.ENDPOINT_STOP
+    log.debug("Issued VCs map: %s", scope_to_vc)
 
     for cm in cms:
         log.info("Dispatching to %s", cm.address)
@@ -104,14 +110,16 @@ def dispatch_cm_patch(
                 scope=cm.scope,
             )
 
-        except Exception:
+        except Exception: # TODO: improve the catch
             log.exception("Failed to issue the JWT, skipping...")
             continue
+
+        if jwt is None: continue
 
         try:
             post(url, jwt)
 
-        except Exception:
+        except Exception: # TODO: improve the catch
             log.exception("Failed to post")
             continue
 
@@ -154,7 +162,6 @@ def dispatch_til(
 ):
     url = f"{Config.HOLDER_TIL_URL}{CredentialsConfig.ENDPOINT}"
 
-    log.debug("Order: %s", order)
     credentials: List[CredentialsConfig] = CredentialsConfig.from_oder(order)
 
     if not credentials:
@@ -173,18 +180,32 @@ def dispatch_til(
 
             cred_types.add(c.credentialsType)
             creds.append(c)
+    # creds: List[CredentialsConfig.Credential] = [
+    #     c
+    #     for cred in credentials
+    #     for c in cred.credentials
+    # ]
+    # cred_types: Set[str] = {
+    #     cred.credentialsType
+    #     for cred in creds
+    # }
 
     log.debug("Catched credentials: %s", creds)
 
-    for consumer in order.consumers:
+    for customer in order.customers:
+        log.info("Updating credential for: %s", customer.did)
+
         try:
-            res = _get(f"{url}/{consumer.did}", throw=False)
+            res = _get(f"{url}/{customer.did}", throw=False)
             log.debug(res)
 
-            assert res.ok or res.not_found
+        except Exception: # TODO: improve the catch
+            log.exception("Failed to fetch til issuers: %s", customer.did)
+            return
 
-        except Exception:
-            log.exception("Failed to fetch til issuers")
+
+        if res.ok or res.not_found:
+            log.error("Failed to fetch til issuers: %s", customer.did)
             return
 
         if res.not_found:
@@ -195,14 +216,16 @@ def dispatch_til(
             continue
 
         credential = cast_dataclass(CredentialsConfig, res.data)
-
-        log.debug("Credential for %s: %s", consumer.did, credential)
+        log.debug("Credential for %s: %s", customer.did, credential)
 
         credential = credential.filter_out(cred_types)
 
         if create_or_patch:
             credential.credentials.extend(creds)
 
-        _delete(f"{url}/{consumer.did}")
+        log.info("Updated credential: %s", credential)
+
+        _delete(f"{url}/{customer.did}")
         _post(f"{url}", credential)
+
 
