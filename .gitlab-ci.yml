@@ -1,6 +1,7 @@
 workflow:
   rules: # Note: non-protected branches will break trying run this pipeline
-    - if: $CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - when: never
 
 include:
@@ -13,4 +14,3 @@ include:
   - project: 'purpleblob/infra/ci-common'
     ref: 'main'
     file: '/ci/docker.yml'
-
