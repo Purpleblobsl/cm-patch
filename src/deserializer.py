@@ -53,6 +53,8 @@ def try_cast(
         #           -> int(125)  -> never runs
         for arg in args:
             if arg is type(None):
+                if value is None:
+                    return None
                 continue
 
             try:
