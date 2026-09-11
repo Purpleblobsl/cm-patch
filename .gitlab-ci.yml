@@ -1,0 +1,16 @@
+workflow:
+  rules: # Note: non-protected branches will break trying run this pipeline
+    - if: $CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - when: never
+
+include:
+  - project: 'purpleblob/infra/ci-common'
+    ref: 'main'
+    file: '/ci/push-docs.yml'
+  - project: 'purpleblob/infra/ci-common'
+    ref: 'main'
+    file: '/ci/pyproject-tag.yml'
+  - project: 'purpleblob/infra/ci-common'
+    ref: 'main'
+    file: '/ci/docker.yml'
+

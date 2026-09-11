@@ -1,0 +1,61 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: cm-patch
+    restart: unless-stopped
+
+
+    extra_hosts: # Note: host so the container can reach our localhost
+      - "host.docker.internal:host-gateway"
+
+    command:
+      - sh
+      - -euc
+      - |
+        uv sync --locked --no-install-project
+        uv run main.py
+
+    ports:
+      - "${APP_PORT:-8080}:${APP_PORT:-8080}"
+
+    volumes: # Note: mount local directory so there is no need to rebuild image
+      - .:/app
+      - app_venv:/app/.venv # Note: separate venv for the image and local
+      - ./data/certs:/certs:ro
+
+    environment: # Note: `.env` will be loaded to fill the values
+      #* app
+      APP_MODE: ${APP_MODE}
+      APP_NAME: ${APP_NAME}
+      APP_PORT: ${APP_PORT}
+      APP_LOG_LEVEL: ${APP_LOG_LEVEL}
+
+      #* holder
+      HOLDER_DID: ${HOLDER_DID}
+      HOLDER_KEY_PATH: /certs/private-key.pem
+
+      HOLDER_DSC_URL: ${HOLDER_DSC_URL}
+      HOLDER_PAP_URL: ${HOLDER_PAP_URL}
+      HOLDER_TIL_URL: ${HOLDER_TIL_URL}
+
+      #* tmf
+      TMF_URL: ${TMF_URL}
+      TMF_IGNORE_ORGS: ${TMF_IGNORE_ORGS}
+
+      #* keycloak
+      KC_URL: ${KC_URL}
+      KC_REALM: ${KC_REALM}
+      KC_CLIENT_ID: ${KC_CLIENT_ID}
+      KC_SCOPE: ${KC_SCOPE}
+      KC_USER: ${KC_USER}
+      KC_PASS: ${KC_PASS}
+
+      #* VC & JWT
+      VC_CONFIG_IDS: ${VC_CONFIG_IDS}
+      VC_CONFIG_FORMATS: ${VC_CONFIG_FORMATS}
+      VC_CONFIG_SCOPES: ${VC_CONFIG_SCOPES}
+
+volumes:
+  app_venv:

@@ -1,0 +1,15 @@
+/.venv
+/.env
+/.env.*
+/data
+__pycache__/
+*.pyc
+
+.git
+.gitignore
+
+/README.md
+/docs
+
+Dockerfile
+Dockerfile.dev
