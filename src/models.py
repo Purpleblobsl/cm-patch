@@ -314,7 +314,7 @@ class Organization:
     @obj
     class CmPatch:
         address: str
-        clientId: str
+        clientId: str # Note: this is not used...
         scope: str
 
     id: str

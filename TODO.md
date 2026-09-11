@@ -11,10 +11,10 @@
     - [ ] Same id: Nothing can be done, but throw a error `:3`
   - [ ] Bundled resources are not handled...
   - [ ] Policies from the order specifications are not checked
+  - [ ] Policies can't be scoped to a service, they are dumped into the default
+        bundle
 
-## docs
+## repo
 
-- [ ] Update readme
-- [ ] **Organization** document how to setup a organization callback
-- [ ] **Pap** document the policy for the service to work
+- [ ] fix: **CI**
 
