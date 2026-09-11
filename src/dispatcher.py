@@ -4,6 +4,7 @@ from typing import (
     List,
     Sequence,
     Set,
+    Tuple,
 )
 
 from .config import Config
@@ -16,6 +17,14 @@ from .utils import logger_get
 #-------------------------------------------------------------------------------
 
 log = logger_get(__name__)
+
+subscriptions: Dict[str, Tuple[str, ...]] = { # { api: (events...) }
+    "productOrderingManagement": (
+        "ProductOrderStateChangeEvent",
+        # Note: for some reason the tmf-api doesn't emit the delete event...
+        "ProductOrderDeleteEvent",
+    ),
+}
 
 def _post(
     url: str,
@@ -63,7 +72,7 @@ def _delete(
         headers=headers,
     ).fetch().raise_for_status()
 
-#- dispatch_x ------------------------------------------------------------------
+#- dispatch --------------------------------------------------------------------
 
 def dispatch_cm_patch(
     order: Order,
@@ -228,4 +237,63 @@ def dispatch_til(
         _delete(f"{url}/{customer.did}")
         _post(f"{url}", credential)
 
+def dispatch_tmf_subscription():
+    if not Config.TMF_SUBCRIBE: return
+
+    log.info("Subscribing to the tmf-api: %s", Config.TMF_URL)
+
+    callback = f"{Config.app_url}{Order.ENDPOINT_LISTEN}"
+
+    for url, event in (
+        (f"{Config.TMF_URL}/tmf-api/{api}/v4/hub", event)
+        for api, events in subscriptions.items()
+        for event in events
+    ):
+        payload = {
+            "callback": callback,
+            "query": f"eventType={event}",
+        }
+
+        log.info("Subscribing to %s", event)
+
+        try:
+            res: Response = Request(
+                method="POST",
+                url=url,
+                data=to_json(payload),
+                json=True,
+            ).fetch()
+
+        except Exception:
+            log.exception(
+                "Failed to post subscription: %s - %s",
+                url,
+                event,
+            )
+            continue
+
+        if res.ok:
+            log.info(
+                "Succesfully subscribed to %s",
+                event,
+            )
+
+        elif res.not_found:
+            log.error(
+                "tmf-api not found: %s",
+                Config.TMF_URL,
+            )
+
+        elif res.status == 409:
+            log.warn(
+                "There is already a subscription for the same event: %s",
+                event,
+            )
+
+        else:
+            log.error(
+                "Failed to post subscription: %d - %s",
+                res.status,
+                res.data,
+            )
 

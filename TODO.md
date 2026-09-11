@@ -2,7 +2,6 @@
 
 ## cm-patch
 
-- [ ] **Subscribe** to the TMF
 - [ ] **Filter** `TMF_IGNORE_ORGS` is not used
 - [ ] **Limits**:
   - [ ] If a event is thrown fails, it's _"forever"_ lost.

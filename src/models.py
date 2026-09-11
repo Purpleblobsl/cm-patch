@@ -56,6 +56,7 @@ class ProductOrderEvent:
 @obj
 class Order:
 
+    ENDPOINT_LISTEN = "/tmf/event"
     ENDPOINT_START = "/order/start"
     ENDPOINT_STOP = "/order/stop"
 
@@ -174,7 +175,6 @@ class ProductOrder:
             relatedParty: List[RelatedParty] = df_list()
 
         id: str
-        action: str
         productOffering: ProductOffering
 
     @obj
@@ -187,11 +187,10 @@ class ProductOrder:
         ]
 
     id: str
-    href: str
     orderDate: str
     productOrderItem: List[ProductOrderItem] = df_list()
     relatedParty: List[RelatedParty] = df_list()
-    state: Literal[
+    state: Optional[Literal[
         "acknowledged",
         "rejected",
         "pending",
@@ -203,7 +202,7 @@ class ProductOrder:
         "partial",
         "assessingCancellation",
         "pendingCancellation",
-    ]
+    ]] = None
 
     @property
     def is_completed(self) -> bool:

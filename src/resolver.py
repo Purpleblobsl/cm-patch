@@ -30,9 +30,6 @@ log = logger_get(__name__)
 def resolve(
     event: ProductOrderEvent,
 ) -> Tuple[List[Organization.CmPatch], Optional[Order]]:
-    if event.eventType != "ProductOrderStateChangeEvent":
-        raise ValueError(f"Unexpected event type: {event.eventType}")
-
     def get(url: str) -> Response:
         return Request(
             method="GET",

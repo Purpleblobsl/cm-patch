@@ -29,6 +29,7 @@ class Config:
     APP_NAME: str = "cm-patch"
     APP_PORT: int = 8080
     APP_LOG_LEVEL: LogLevel = LogLevel.INFO
+    APP_HOST: str = "cm-patch"
 
     #* holder
 
@@ -37,13 +38,14 @@ class Config:
     # HOLDER_KEY_TYPE: str # EC
     # HOLDER_SIGNATURE_ALGORITHM: str # ES256
 
-    HOLDER_DSC_URL: str = "https://example.com"
+    HOLDER_DSC_URL: str
     HOLDER_PAP_URL: str
     HOLDER_TIL_URL: str
 
     #* tmf
 
     TMF_URL: str
+    TMF_SUBCRIBE: bool
     TMF_IGNORE_ORGS: Tuple[str, ...] = tuple() # TODO: not implemented
 
     #* keycloak
@@ -62,6 +64,10 @@ class Config:
     VC_CONFIG_SCOPES: Tuple[str, ...]
 
     #* sugar
+
+    @property
+    def app_url(self) -> str:
+        return f"http://{self.APP_HOST}:{self.APP_PORT}"
 
     @property
     def kc_url(self) -> str:

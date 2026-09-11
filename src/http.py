@@ -93,7 +93,7 @@ def create_server(name: str) -> Flask:
 def health() -> ResponseReturn:
     return {"status": "ok"}, 200
 
-@enpoint("/tmf/event", method="post")
+@enpoint(Order.ENDPOINT_LISTEN, method="post")
 def tmf_event() -> ResponseReturn:
     data = request.get_json(silent=True)
 
@@ -112,9 +112,10 @@ def tmf_event() -> ResponseReturn:
 
     log.info("Catched %s: %s...", event.eventType, event.eventId)
 
-    if event.eventType != "ProductOrderStateChangeEvent":
+    if event.eventType == "ProductOrderCreateEvent":
         log.info(
-            "Event %s is not a 'ProductOrderStateChangeEvent', skipping...",
+            "Event %s is not a 'ProductOrderStateChangeEvent' or "
+            "'ProductOrderDeleteEvent', skipping...",
             event.eventId,
         )
         return "", 204
