@@ -227,4 +227,3 @@ docker compose up
 ## Links
 
 - [FIWARE Data Space Connector](https://github.com/FIWARE/data-space-connector)
-

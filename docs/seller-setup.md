@@ -321,4 +321,3 @@ routes:
 > Although the `apisix` API can be used to apply this configuration, using the
 > deployment values is recommended so that the configuration remains declarative
 > and is automatically restored when the deployment is recreated.
-
