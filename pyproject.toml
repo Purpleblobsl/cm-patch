@@ -1,6 +1,6 @@
 [project]
 name = "cm-patch"
-version = "1.0.0"
+version = "1.1.0"
 description = "Contract-Management - Patch Around TMF Contract Handling"
 readme = "README.md"
 requires-python = ">=3.14"

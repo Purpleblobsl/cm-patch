@@ -30,6 +30,7 @@ class Config:
     APP_PORT: int = 8080
     APP_LOG_LEVEL: LogLevel = LogLevel.INFO
     APP_HOST: str = "cm-patch"
+    APP_IS_CLIENT: bool = True
 
     #* holder
 

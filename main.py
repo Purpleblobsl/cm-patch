@@ -13,7 +13,8 @@ def main():
     log.info("Config loaded")
     log.debug("Loaded Config:\n%s", dump_str(Config))
 
-    dispatch_tmf_subscription()
+    if not Config.APP_IS_CLIENT:
+        dispatch_tmf_subscription()
 
     log.info("Creating http server")
     create_server(Config.APP_NAME).run(
@@ -21,7 +22,6 @@ def main():
         port=Config.APP_PORT,
         debug=Config.APP_MODE == Mode.DEV,
     )
-
 
 if __name__ == "__main__":
     main()

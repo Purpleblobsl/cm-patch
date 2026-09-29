@@ -11,6 +11,7 @@ from typing import(
 
 from flask import Flask, request
 
+from .config import Config
 from .deserializer import cast_dataclass
 from .dispatcher import dispatch_cm_patch, dispatch_pap, dispatch_til
 from .models import (
@@ -95,6 +96,10 @@ def health() -> ResponseReturn:
 
 @enpoint(Order.ENDPOINT_LISTEN, method="post")
 def tmf_event() -> ResponseReturn:
+    if Config.APP_IS_CLIENT:
+        log.warning("Service is a client, can't handle events")
+        return {"error": "Service is a client, can't handle events"}, 409
+
     data = request.get_json(silent=True)
 
     if data is None:
