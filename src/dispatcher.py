@@ -213,10 +213,6 @@ def dispatch_til(
             return
 
 
-        if res.ok or res.not_found:
-            log.error("Failed to fetch til issuers: %s", customer.did)
-            return
-
         if res.not_found:
             if create_or_patch:
                 for cred in credentials:
